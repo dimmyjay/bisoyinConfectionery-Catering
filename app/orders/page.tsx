@@ -5,10 +5,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { Loader, Package, Download, ShoppingCart, CheckCircle, Clock, XCircle, Wifi, MapPin } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-// ✅ Import the Order type directly from your services to avoid type conflicts
-import { subscribeUserOrders, type Order } from "@/services/orders";
+// ✅ Import the base Order type and rename it to BaseOrder
+import { subscribeUserOrders, type Order as BaseOrder } from "@/services/orders";
 import { setCart } from "@/utils/cart";
 import { useSearchParams } from "next/navigation";
+
+// ✅ Extend the base Order type to include your custom 'deliveredAt' field
+interface Order extends BaseOrder {
+  deliveredAt?: number;
+}
 
 const TrackingSteps = ({ status }: { status: string }) => {
   const steps = [
@@ -73,7 +78,7 @@ const TrackingSteps = ({ status }: { status: string }) => {
 
 export default function OrdersPage() {
   const { user, loading: authLoading } = useAuth();
-  // ✅ Now uses the imported Order type
+  // ✅ Now uses the extended Order type
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
@@ -96,7 +101,8 @@ export default function OrdersPage() {
 
     setLoading(true);
     const unsubscribe = subscribeUserOrders(user.uid, (liveOrders) => {
-      setOrders(liveOrders);
+      // Cast to Order[] to satisfy the extended type
+      setOrders(liveOrders as Order[]);
       setLoading(false);
     });
 
