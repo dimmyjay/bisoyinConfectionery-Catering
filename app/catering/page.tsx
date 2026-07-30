@@ -19,38 +19,45 @@ export const metadata: Metadata = {
 };
 
 // Default fallback data in case the database is empty
+// ✅ Added 'id' to each default object to prevent Type Errors
 const defaultCateringServices = [
   {
+    id: "default-wedding",
     title: "Wedding Catering",
     description: "Elegant buffets, custom wedding cakes, premium small chops, and dedicated drink stations designed to make your special day unforgettable.",
     image: "/images/catering/wedding.jpg",
     features: ["Custom Menu Design", "On-site Coordination", "Premium Table Setup"],
   },
   {
+    id: "default-corporate",
     title: "Corporate Catering",
     description: "Professional and punctual catering for meetings, seminars, conferences, and company events. From boxed lunches to full executive buffets.",
     image: "/images/catering/corporate.jpg",
     features: ["Timely Delivery", "Dietary Options", "Professional Staff"],
   },
   {
+    id: "default-birthday",
     title: "Birthday & Private Parties",
     description: "Celebrate milestones with our themed dessert tables, mouth-watering small chops platters, and delicious main course packages tailored to your guests.",
     image: "/images/catering/birthday.jpg",
     features: ["Themed Dessert Tables", "Kid-Friendly Options", "Flexible Portions"],
   },
   {
+    id: "default-church",
     title: "Church Programs & Conventions",
     description: "Reliable, large-scale catering for church events, conventions, thanksgiving services, and celebrations. We handle bulk orders with utmost care.",
     image: "/images/catering/church.jpg",
     features: ["Bulk Meal Packs", "Refreshment Stands", "Budget-Friendly"],
   },
   {
+    id: "default-outdoor",
     title: "Outdoor Events & Festivals",
     description: "Quality food and excellent service for picnics, outdoor weddings, festivals, and community celebrations. We bring the kitchen to you.",
     image: "/images/catering/outdoor.jpg",
     features: ["Mobile Food Stations", "Weather-Resistant Setup", "Grill & BBQ Options"],
   },
   {
+    id: "default-vip",
     title: "VIP & Executive Catering",
     description: "Premium, high-end catering for exclusive gatherings. Featuring beautifully plated meals, personalized service, and artisanal desserts.",
     image: "/images/catering/vip.jpg",
@@ -102,7 +109,7 @@ export default async function CateringPage() {
     if (dbData && typeof dbData === "object") {
       // Transform Realtime DB object into an array
       cateringServices = Object.entries(dbData).map(([id, item]: [string, any]) => ({
-        id,
+        id, // ID comes from the Firebase key
         title: item.title || "Catering Service",
         description: item.description || "Professional catering services tailored to your needs.",
         image: item.image || "/images/catering/default.jpg",
@@ -169,7 +176,8 @@ export default async function CateringPage() {
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             {cateringServices.map((service, index) => (
               <div
-                key={service.id || index}
+                // ✅ Safe key: uses service.id if available, otherwise falls back to index
+                key={service.id || `fallback-${index}`}
                 className="group rounded-3xl bg-white overflow-hidden shadow-lg transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl"
               >
                 <div className="relative h-56 overflow-hidden bg-gray-200">
