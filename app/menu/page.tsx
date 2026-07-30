@@ -260,7 +260,12 @@ export default function MenuPage() {
                 if (visible.length === 0 && !selectedCategory) return null;
 
                 return (
-                  <div key={cat.slug} ref={(el) => (sectionRefs.current[cat.slug] = el)} className="mb-12">
+                  <div 
+                    key={cat.slug} 
+                    // ✅ Fixed: Use curly braces to ensure the callback returns void instead of the assigned value
+                    ref={(el) => { sectionRefs.current[cat.slug] = el; }} 
+                    className="mb-12"
+                  >
                     <div className="mb-4 flex items-center justify-between">
                       <h3 className="text-2xl font-semibold">{cat.title}</h3>
                       <p className="text-sm text-gray-600">{allItems.length} items</p>
