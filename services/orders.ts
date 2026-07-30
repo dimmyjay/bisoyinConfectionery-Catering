@@ -1,5 +1,3 @@
-// services/orders.ts
-
 import {
   addData,
   getData,
@@ -34,6 +32,7 @@ export interface Order {
   paymentReference?: string;
   paymentStatus: "pending" | "success" | "failed";
   orderStatus: "processing" | "confirmed" | "completed" | "cancelled";
+  deliveredAt?: number; // ✅ Added for delivery tracking
   note?: string;
   createdAt?: number;
 }
@@ -76,6 +75,7 @@ export async function getOrders() {
         Object.entries(userOrdersObj).forEach(([pushId, orderData]) => {
           allOrders.push({
             id: pushId,
+            userId, // Ensure userId is attached
             ...(orderData as any),
           });
         });
@@ -110,6 +110,7 @@ export async function getUserOrders(userId: string) {
     // 2. Convert the nested object { "-pushId": { orderData } } into an array
     const ordersArray = Object.entries(rawOrders).map(([pushId, value]) => ({
       id: pushId, // The Firebase push key becomes the order ID
+      userId,
       ...(value as any),
     }));
 
@@ -135,6 +136,7 @@ export async function getOrder(orderId: string, userId: string) {
 
     return {
       id: orderId,
+      userId,
       ...order,
     } as Order;
   } catch (error) {
@@ -219,10 +221,43 @@ export function subscribeUserOrders(
     const orders = Object.entries(data)
       .map(([pushId, value]) => ({
         id: pushId,
+        userId,
         ...(value as Order),
       }))
       .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
     callback(orders);
+  });
+}
+
+// ===============================
+// Real-time Global Orders Listener (Admin)
+// ===============================
+
+export function subscribeOrders(
+  callback: (orders: Order[]) => void
+) {
+  return listenToData("orders", (data) => {
+    if (!data) {
+      callback([]);
+      return;
+    }
+
+    const allOrders: Order[] = [];
+
+    // Handle nested structure: { "userId": { "pushId": { orderData } } }
+    Object.entries(data).forEach(([userId, userOrdersObj]) => {
+      if (typeof userOrdersObj === "object" && userOrdersObj !== null) {
+        Object.entries(userOrdersObj).forEach(([pushId, orderData]) => {
+          allOrders.push({
+            id: pushId,
+            userId,
+            ...(orderData as any),
+          });
+        });
+      }
+    });
+
+    callback(allOrders.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
   });
 }
