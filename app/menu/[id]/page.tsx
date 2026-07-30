@@ -27,7 +27,7 @@ export default async function ProductPage({ params }: Props) {
 
   const cakes = allProducts.filter((p) => (p.category ?? "").toLowerCase() === "cakes" && excludeCurrent(p)).slice(0, 4);
   const pastries = allProducts.filter((p) => (p.category ?? "").toLowerCase() === "pastries" && excludeCurrent(p)).slice(0, 4);
-  const caterings = allProducts.filter((p) => (p.category ?? "").toLowerCase() === "catering" && excludeCurrent(p)).slice(0, 4);
+  const caterings = allProducts.filter((p) => (p.category ?? "").toLowerCase() === "catering services" && excludeCurrent(p)).slice(0, 4);
 
   return (
     <main className="min-h-screen bg-gray-50 py-16">
@@ -97,7 +97,7 @@ export default async function ProductPage({ params }: Props) {
           {[
             { key: "cakes", title: "More Cakes", items: cakes, desc: "Explore more of our beautifully crafted cakes." },
             { key: "pastries", title: "Fresh Pastries", items: pastries, desc: "Delicious pastries baked daily." },
-            { key: "caterings", title: "Catering Packages", items: caterings, desc: "Full catering packages for every event." },
+            { key: "catering services", title: "Catering Packages", items: caterings, desc: "Full catering packages for every event." },
           ].map((block) => (
             <div key={block.key} className="rounded-2xl bg-white p-6 shadow">
               <div className="flex items-start justify-between">
@@ -124,7 +124,6 @@ export default async function ProductPage({ params }: Props) {
                       image={p.image}
                       category={p.category}
                       price={p.price}
-                      rating={5}
                     />
                   ))
                 ) : (
