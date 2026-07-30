@@ -2,7 +2,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
   images: {
     // Allow Next/Image to load avatars, cloud storage images, and external images
     remotePatterns: [
