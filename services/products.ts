@@ -164,15 +164,19 @@ export async function updateProduct(
 
 /**
  * Delete product
+ * ✅ Renamed from removeProduct to deleteProduct to match dashboard imports
  */
-export async function removeProduct(id: string): Promise<void> {
+export async function deleteProduct(id: string): Promise<void> {
   try {
     await deleteData(`products/${id}`);
   } catch (error) {
-    console.error(`removeProduct failed (id=${id}):`, error);
+    console.error(`deleteProduct failed (id=${id}):`, error);
     throw error;
   }
 }
+
+// Alias for backward compatibility in case other files use the old name
+export const removeProduct = deleteProduct;
 
 /**
  * Real-time listener
