@@ -89,8 +89,8 @@ export default function SignInPage() {
       // Add a small delay to ensure cookie is set
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // Redirect to dashboard
-      router.push("/dashboard");
+      // ✅ Redirect to homepage
+      router.push("/");
     } catch (error: any) {
       console.error("Sign in error:", error);
 
@@ -138,8 +138,8 @@ export default function SignInPage() {
       // Add a small delay to ensure cookie is set
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // Redirect to dashboard
-      router.push("/dashboard");
+      // ✅ Redirect to homepage
+      router.push("/");
     } catch (error: any) {
       console.error("Google sign in error:", error);
 
