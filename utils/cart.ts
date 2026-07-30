@@ -33,7 +33,8 @@ function normalizeToCartItem(p: CartItemPayload): CartItem {
     id,
     name: p.name,
     price: Number(p.price ?? 0),
-    image: p.image,
+    // ✅ Fallback to empty string to satisfy Required<CartItemPayload>
+    image: p.image ?? "", 
     quantity: Math.max(1, Number(p.quantity ?? 1)),
   };
 }
