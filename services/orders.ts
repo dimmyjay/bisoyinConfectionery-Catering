@@ -75,8 +75,8 @@ export async function getOrders() {
         Object.entries(userOrdersObj).forEach(([pushId, orderData]) => {
           allOrders.push({
             id: pushId,
-            userId, // Ensure userId is attached
             ...(orderData as any),
+            userId, // ✅ Place userId AFTER spread to ensure it's set correctly and avoid TS overwrite warning
           });
         });
       }
@@ -110,8 +110,8 @@ export async function getUserOrders(userId: string) {
     // 2. Convert the nested object { "-pushId": { orderData } } into an array
     const ordersArray = Object.entries(rawOrders).map(([pushId, value]) => ({
       id: pushId, // The Firebase push key becomes the order ID
-      userId,
       ...(value as any),
+      userId, // ✅ Place userId AFTER spread
     }));
 
     console.log("✅ [getUserOrders] Successfully mapped orders:", ordersArray.length);
@@ -136,8 +136,8 @@ export async function getOrder(orderId: string, userId: string) {
 
     return {
       id: orderId,
-      userId,
       ...order,
+      userId, // ✅ Place userId AFTER spread
     } as Order;
   } catch (error) {
     console.error("Get order failed:", error);
@@ -221,8 +221,8 @@ export function subscribeUserOrders(
     const orders = Object.entries(data)
       .map(([pushId, value]) => ({
         id: pushId,
-        userId,
         ...(value as Order),
+        userId, // ✅ Place userId AFTER spread
       }))
       .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
@@ -251,8 +251,8 @@ export function subscribeOrders(
         Object.entries(userOrdersObj).forEach(([pushId, orderData]) => {
           allOrders.push({
             id: pushId,
-            userId,
             ...(orderData as any),
+            userId, // ✅ Place userId AFTER spread
           });
         });
       }
