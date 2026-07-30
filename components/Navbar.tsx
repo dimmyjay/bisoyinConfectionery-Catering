@@ -160,7 +160,10 @@ export default function Navbar() {
 
   const toggleMenu = () => setMenuOpen((s) => !s);
 
-  const handleSignIn = () => router.push("/auth/sign-in");
+  // ✅ Use router.push for programmatic navigation
+  const handleSignIn = () => {
+    router.push("/auth/sign-in");
+  };
 
   const handleLogout = async () => {
     try {
@@ -292,7 +295,13 @@ export default function Navbar() {
               )}
             </div>
           ) : (
-            <button onClick={handleSignIn} className="rounded-full bg-orange-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-700">Sign In</button>
+            // ✅ Changed from <button> to <Link> for better reliability
+            <Link 
+              href="/auth/sign-in" 
+              className="rounded-full bg-orange-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-700"
+            >
+              Sign In
+            </Link>
           )}
 
           <Link href="/menu" className="rounded-xl bg-orange-600 px-5 py-3 font-semibold text-white transition hover:bg-orange-700">Order Now</Link>
@@ -343,7 +352,14 @@ export default function Navbar() {
                   <button onClick={async () => { setMenuOpen(false); await handleLogout(); }} className="block w-full rounded-xl bg-red-600 px-4 py-3 text-center font-semibold text-white">Logout</button>
                 </>
               ) : (
-                <button onClick={() => { setMenuOpen(false); handleSignIn(); }} className="block w-full rounded-xl bg-orange-600 px-4 py-3 text-center font-semibold text-white">Sign In</button>
+                // ✅ Use Link here too for consistency
+                <Link 
+                  href="/auth/sign-in" 
+                  onClick={() => setMenuOpen(false)} 
+                  className="block w-full rounded-xl bg-orange-600 px-4 py-3 text-center font-semibold text-white"
+                >
+                  Sign In
+                </Link>
               )}
             </div>
           </div>
