@@ -3,44 +3,18 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Loader, Package, RefreshCw, Download, ShoppingCart, CheckCircle, Truck, Clock, XCircle, Wifi, MapPin } from "lucide-react";
+import { Loader, Package, Download, ShoppingCart, CheckCircle, Clock, XCircle, Wifi, MapPin } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { subscribeUserOrders } from "@/services/orders";
+// ✅ Import the Order type directly from your services to avoid type conflicts
+import { subscribeUserOrders, type Order } from "@/services/orders";
 import { setCart } from "@/utils/cart";
 import { useSearchParams } from "next/navigation";
-
-interface OrderItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image?: string;
-}
-
-interface Order {
-  id: string;
-  userId: string;
-  customerName: string;
-  email: string;
-  phone: string;
-  address: string;
-  city: string;
-  state: string;
-  items: OrderItem[];
-  total: number;
-  paymentReference?: string;
-  paymentStatus: "pending" | "success" | "failed";
-  orderStatus: "processing" | "confirmed" | "completed" | "cancelled";
-  deliveredAt?: number; // ✅ NEW: Tracks exactly when the user received the goods
-  note?: string;
-  createdAt?: number;
-}
 
 const TrackingSteps = ({ status }: { status: string }) => {
   const steps = [
     { key: "processing", label: "Processing", icon: Clock, desc: "Order received" },
     { key: "confirmed", label: "Confirmed", icon: CheckCircle, desc: "Preparing items" },
-    { key: "completed", label: "Delivered", icon: MapPin, desc: "Goods received" }, // ✅ Changed to "Delivered"
+    { key: "completed", label: "Delivered", icon: MapPin, desc: "Goods received" },
   ];
 
   const currentStepIndex = steps.findIndex((s) => s.key === status);
@@ -99,6 +73,7 @@ const TrackingSteps = ({ status }: { status: string }) => {
 
 export default function OrdersPage() {
   const { user, loading: authLoading } = useAuth();
+  // ✅ Now uses the imported Order type
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
@@ -142,7 +117,7 @@ export default function OrdersPage() {
 ==================================================
                   OFFICIAL RECEIPT
 ==================================================
-Order ID:      ${order.id}
+Order ID:      ${order.id || "N/A"}
 Date:          ${formatDate(order.createdAt)}
 Delivered:     ${order.deliveredAt ? formatDate(order.deliveredAt) : "Pending"}
 Payment Ref:   ${order.paymentReference || "N/A"}
@@ -153,7 +128,7 @@ Phone:         ${order.phone}
 Address:       ${order.address}, ${order.city}, ${order.state}
 --------------------------------------------------
 ORDER ITEMS
-${order.items.map((item) => 
+${order.items.map((item: any) => 
   `${item.name.padEnd(30)} x${item.quantity.toString().padStart(2)} = ₦${(item.price * item.quantity).toLocaleString()}`
 ).join("\n")}
 --------------------------------------------------
@@ -165,7 +140,7 @@ Order Status:   ${order.orderStatus.toUpperCase()}
     const url = URL.createObjectURL(blob);
     const element = document.createElement("a");
     element.href = url;
-    element.download = `Receipt-${order.id}.txt`;
+    element.download = `Receipt-${order.id || "order"}.txt`;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
@@ -174,7 +149,7 @@ Order Status:   ${order.orderStatus.toUpperCase()}
 
   const handleOrderAgain = async (order: Order) => {
     try {
-      const cartItems = order.items.map((item) => ({
+      const cartItems = order.items.map((item: any) => ({
         id: item.id, name: item.name, price: item.price, quantity: item.quantity, image: item.image,
       }));
       await setCart(cartItems);
@@ -224,7 +199,7 @@ Order Status:   ${order.orderStatus.toUpperCase()}
             {orders.map((order) => (
               <div key={order.id} className="rounded-2xl bg-white p-8 shadow-sm overflow-hidden border border-gray-100">
                 
-                {/* ✅ DELIVERY CONFIRMATION BANNER */}
+                {/* DELIVERY CONFIRMATION BANNER */}
                 {order.orderStatus === "completed" && order.deliveredAt && (
                   <div className="mb-6 bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3 text-green-800">
                     <CheckCircle className="text-green-600 flex-shrink-0" size={24} />
@@ -237,7 +212,7 @@ Order Status:   ${order.orderStatus.toUpperCase()}
 
                 <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-start md:justify-between border-b border-gray-100 pb-6">
                   <div className="flex-1">
-                    <h2 className="text-xl font-bold text-gray-900">Order #{order.id.slice(-8).toUpperCase()}</h2>
+                    <h2 className="text-xl font-bold text-gray-900">Order #{(order.id || "UNKNOWN").slice(-8).toUpperCase()}</h2>
                     <p className="mt-1 text-sm text-gray-500">Placed on {formatDate(order.createdAt)}</p>
                     <TrackingSteps status={order.orderStatus} />
                   </div>
@@ -249,8 +224,8 @@ Order Status:   ${order.orderStatus.toUpperCase()}
 
                 <div className="mb-8 space-y-4">
                   <h3 className="font-semibold text-gray-900 text-sm uppercase tracking-wide">Order Items</h3>
-                  {order.items.map((item) => (
-                    <div key={item.id} className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 border border-gray-100">
+                  {order.items.map((item: any, index: number) => (
+                    <div key={item.id || index} className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 border border-gray-100">
                       <div className="relative h-16 w-16 overflow-hidden rounded-lg bg-gray-200 flex-shrink-0">
                         {item.image ? (
                           <Image src={item.image} alt={item.name} fill className="object-cover" />
