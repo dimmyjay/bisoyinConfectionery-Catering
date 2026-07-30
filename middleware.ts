@@ -42,14 +42,14 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/auth/sign-in", request.url));
   }
 
-  // If authenticated user tries to visit auth pages, redirect to dashboard
+  // ✅ If authenticated user tries to visit auth pages, redirect to homepage
   const isAuthPage =
     pathname === "/auth/sign-in" ||
     pathname === "/auth/sign-up" ||
     pathname === "/auth";
 
   if (isAuthPage && token) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   // Protect admin routes
