@@ -9,7 +9,7 @@ interface Customer {
   uid: string;
   name: string;
   email: string;
-  phone?: string;
+  phone: string; // Changed to required string since we default it below
   orders: number;
   totalSpent: number;
   createdAt: number;
@@ -56,7 +56,8 @@ export default function CustomersPage() {
               uid,
               name: userData.name || "Unknown User",
               email: userData.email || "",
-              phone: userData.phone || "N/A",
+              // ✅ Ensure phone is always a string to avoid undefined errors
+              phone: userData.phone || "N/A", 
               orders: userOrders.length,
               totalSpent,
               createdAt: userData.createdAt || Date.now(),
@@ -84,11 +85,15 @@ export default function CustomersPage() {
   const handleSearch = (query: string) => {
     setSearchQuery(query);
 
-    const filtered = customers.filter((customer) =>
-      customer.name.toLowerCase().includes(query.toLowerCase()) ||
-      customer.email.toLowerCase().includes(query.toLowerCase()) ||
-      customer.phone.includes(query)
-    );
+    const filtered = customers.filter((customer) => {
+      const lowerQuery = query.toLowerCase();
+      return (
+        customer.name.toLowerCase().includes(lowerQuery) ||
+        customer.email.toLowerCase().includes(lowerQuery) ||
+        // ✅ Safe navigation operator (?.) prevents crash if phone is missing
+        customer.phone?.toLowerCase().includes(lowerQuery)
+      );
+    });
 
     setFilteredCustomers(filtered);
   };
