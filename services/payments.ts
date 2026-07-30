@@ -2,7 +2,6 @@
 
 import { updatePaymentStatus } from "./orders";
 
-
 // ===============================
 // Paystack Response Type
 // ===============================
@@ -17,8 +16,6 @@ export interface PaymentResponse {
   };
 }
 
-
-
 // ===============================
 // Initialize Paystack Payment
 // ===============================
@@ -28,185 +25,100 @@ export async function initializePayment(
   amount: number,
   metadata?: any
 ) {
-
   try {
+    const response = await fetch("/api/paystack/initialize", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email,
+        // Paystack accepts amount in kobo
+        amount: amount * 100,
+        metadata,
+      }),
+    });
 
-    const response =
-      await fetch(
-        "/api/paystack/initialize",
-        {
-          method: "POST",
+    const data = await response.json();
 
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-
-          body: JSON.stringify({
-
-            email,
-
-            // Paystack accepts amount in kobo
-            amount:
-              amount * 100,
-
-            metadata,
-
-          }),
-
-        }
-      );
-
-
-    const data =
-      await response.json();
-
-
-    if(!response.ok){
-
-      throw new Error(
-        data.message ||
-        "Payment initialization failed"
-      );
-
+    if (!response.ok) {
+      throw new Error(data.message || "Payment initialization failed");
     }
 
-
     return data;
-
-
-  } catch(error){
-
-    console.error(
-      "Initialize payment error:",
-      error
-    );
-
+  } catch (error) {
+    console.error("Initialize payment error:", error);
     throw error;
-
   }
-
 }
-
-
 
 // ===============================
 // Verify Paystack Payment
 // ===============================
 
-export async function verifyPayment(
-  reference:string
-){
+export async function verifyPayment(reference: string) {
+  try {
+    const response = await fetch(`/api/paystack/verify?reference=${reference}`, {
+      method: "GET",
+    });
 
-  try{
+    const data = await response.json();
 
-    const response =
-      await fetch(
-        `/api/paystack/verify?reference=${reference}`,
-        {
-          method:"GET",
-        }
-      );
-
-
-    const data =
-      await response.json();
-
-
-    if(!response.ok){
-
-      throw new Error(
-        data.message ||
-        "Payment verification failed"
-      );
-
+    if (!response.ok) {
+      throw new Error(data.message || "Payment verification failed");
     }
 
-
     return data;
-
-
-  }catch(error){
-
-    console.error(
-      "Verify payment error:",
-      error
-    );
-
+  } catch (error) {
+    console.error("Verify payment error:", error);
     throw error;
-
   }
-
 }
-
-
 
 // ===============================
 // Complete Successful Payment
 // ===============================
 
 export async function completePayment(
-  orderId:string,
-  reference:string
-){
-
-  try{
-
+  userId: string, // ✅ Added userId
+  orderId: string,
+  reference: string
+) {
+  try {
     await updatePaymentStatus(
-      orderId,
-      "success",
-      reference
+      userId,      // ✅ Correctly aligned
+      orderId,     // ✅ Correctly aligned
+      "success",   // ✅ Correctly aligned
+      reference    // ✅ Correctly aligned
     );
-
 
     return true;
-
-
-  }catch(error){
-
-    console.error(
-      "Complete payment error:",
-      error
-    );
-
+  } catch (error) {
+    console.error("Complete payment error:", error);
     throw error;
-
   }
-
 }
-
-
 
 // ===============================
 // Mark Failed Payment
 // ===============================
 
 export async function failedPayment(
-  orderId:string,
-  reference?:string
-){
-
-  try{
-
+  userId: string, // ✅ Added userId
+  orderId: string,
+  reference?: string
+) {
+  try {
     await updatePaymentStatus(
-      orderId,
-      "failed",
-      reference
+      userId,      // ✅ Correctly aligned
+      orderId,     // ✅ Correctly aligned
+      "failed",    // ✅ Correctly aligned
+      reference    // ✅ Correctly aligned
     );
-
 
     return true;
-
-
-  }catch(error){
-
-    console.error(
-      "Failed payment update error:",
-      error
-    );
-
+  } catch (error) {
+    console.error("Failed payment update error:", error);
     throw error;
-
   }
-
 }
