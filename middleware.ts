@@ -1,36 +1,24 @@
+// middleware.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const protectedRoutes = [
-  "/dashboard",
-  "/profile",
-  "/orders",
-];
-
-const publicRoutes = [
-  "/auth/sign-in",
-  "/auth/sign-up",
-  "/auth",
-  "/menu",
-  "/catering",
-  "/gallery",
-  "/blog",
-  "/contact",
-  "/cart",
-];
-
+const protectedRoutes = ["/dashboard", "/profile", "/orders"];
 const adminRoutes = ["/admin"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Read auth cookie(s) - adjust names to match what you set
-  const token =
-    request.cookies.get("auth-token")?.value ||
-    request.cookies.get("__session")?.value ||
-    null;
+  // ✅ ALWAYS ALLOW AUTH PAGES TO PREVENT LOCKOUT
+  if (
+    pathname.startsWith("/auth") ||
+    pathname === "/auth/sign-in" ||
+    pathname === "/auth/sign-up"
+  ) {
+    return NextResponse.next();
+  }
 
-  const role = request.cookies.get("user-role")?.value || null;
+  // Read auth cookie (Ensure you are setting this cookie upon login!)
+  const token = request.cookies.get("auth-token")?.value;
 
   // Helper: is this a protected route?
   const isProtected = protectedRoutes.some(
@@ -42,23 +30,16 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/auth/sign-in", request.url));
   }
 
-  // ✅ If authenticated user tries to visit auth pages, redirect to homepage
-  const isAuthPage =
-    pathname === "/auth/sign-in" ||
-    pathname === "/auth/sign-up" ||
-    pathname === "/auth";
-
-  if (isAuthPage && token) {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
-
   // Protect admin routes
   const isAdminRoute = adminRoutes.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
 
-  if (isAdminRoute && role !== "admin") {
-    return NextResponse.redirect(new URL("/", request.url));
+  if (isAdminRoute) {
+    const role = request.cookies.get("user-role")?.value;
+    if (role !== "admin") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
   }
 
   return NextResponse.next();
@@ -66,23 +47,10 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Dashboard exact and subpaths
-    "/dashboard",
     "/dashboard/:path*",
-
-    // Profile, orders (exact + subpaths)
-    "/profile",
     "/profile/:path*",
-    "/orders",
     "/orders/:path*",
-
-    // Admin
-    "/admin",
     "/admin/:path*",
-
-    // Auth pages (so we can redirect logged-in users away)
-    "/auth/sign-in",
-    "/auth/sign-up",
-    "/auth",
+    "/auth/:path*", // Include auth to allow the redirect logic above to work
   ],
 };
