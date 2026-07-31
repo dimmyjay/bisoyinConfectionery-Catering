@@ -80,7 +80,6 @@ export default function Navbar() {
         (snapshot) => {
           const val = snapshot.val();
           
-          // ✅ FIX: Defer state update to avoid "setState in render" conflict with CartPage
           queueMicrotask(() => {
             if (!val) {
               setCartCount(0);
@@ -370,10 +369,10 @@ export default function Navbar() {
         </button>
       </div>
 
-      {/* Mobile Menu */}
+      {/* ✅ FIXED: Mobile Menu with Scroll Support */}
       {menuOpen && (
-        <div className="border-t bg-white lg:hidden animate-in slide-in-from-top-5 duration-200">
-          <div className="space-y-4 p-6">
+        <div className="fixed inset-x-0 top-20 z-40 max-h-[calc(100vh-5rem)] overflow-y-auto border-t bg-white lg:hidden shadow-xl animate-in slide-in-from-top-5 duration-200">
+          <div className="space-y-4 p-6 pb-8">
             {/* ✅ Mobile Search */}
             <form onSubmit={handleSearchSubmit} className="relative">
               <input
@@ -406,7 +405,6 @@ export default function Navbar() {
                 <>
                   <Link href="/profile" onClick={() => setMenuOpen(false)} className="block rounded-xl bg-gray-100 px-4 py-3 text-center font-semibold text-gray-700 hover:bg-gray-200 transition">My Profile</Link>
                   <Link href="/orders" onClick={() => setMenuOpen(false)} className="block rounded-xl bg-gray-100 px-4 py-3 text-center font-semibold text-gray-700 hover:bg-gray-200 transition">My Orders</Link>
-                  {/* ✅ Added Dashboard to Mobile Menu */}
                   <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="block rounded-xl bg-gray-100 px-4 py-3 text-center font-semibold text-gray-700 hover:bg-gray-200 transition">Dashboard</Link>
                   
                   <button 
