@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getUserOrders } from "@/services/orders";
+import { realtimeDb } from "@/firebase/client";
+import { ref, onValue } from "firebase/database";
 
 interface Order {
   id: string;
@@ -21,31 +23,84 @@ interface Order {
   createdAt: number;
   orderStatus: "processing" | "confirmed" | "completed" | "cancelled";
   total: number;
+  userId?: string;
 }
 
 export default function DashboardContent() {
   const router = useRouter();
   const { user, profile, loading: authLoading } = useAuth();
+  
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // ✅ States for real-time data
+  const [cartCount, setCartCount] = useState<number>(0);
+  const [wishlistCount, setWishlistCount] = useState<number>(0);
 
-  // Redirect unauthenticated users to sign-in after auth check completes
+  // Redirect unauthenticated users
   useEffect(() => {
     if (!authLoading && !user) {
-      // Use replace so back doesn't go back to protected page
       router.replace("/auth/sign-in");
     }
   }, [authLoading, user, router]);
 
+  // ✅ 1. Fetch Cart Count (Checks Firebase first, falls back to LocalStorage)
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const cartRef = ref(realtimeDb, `carts/${user.uid}`);
+    const unsubscribe = onValue(cartRef, (snapshot) => {
+      const val = snapshot.val();
+      if (!val) {
+        // Fallback to localStorage if Firebase is empty
+        try {
+          const localCart = JSON.parse(localStorage.getItem("cart") || "[]");
+          setCartCount(localCart.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0));
+        } catch {
+          setCartCount(0);
+        }
+        return;
+      }
+      
+      let count = 0;
+      if (typeof val === "object") {
+        for (const item of Object.values(val)) {
+          const q = Number((item as any)?.quantity ?? 0);
+          if (!isNaN(q)) count += q;
+        }
+      }
+      setCartCount(count);
+    });
+
+    return () => unsubscribe();
+  }, [user?.uid]);
+
+  // ✅ 2. Fetch Wishlist Count
+  useEffect(() => {
+    if (!user?.uid) return;
+    const wishlistRef = ref(realtimeDb, `wishlists/${user.uid}`);
+    const unsubscribe = onValue(wishlistRef, (snapshot) => {
+      const val = snapshot.val();
+      if (!val) {
+        setWishlistCount(0);
+      } else {
+        setWishlistCount(Object.keys(val).length);
+      }
+    });
+    return () => unsubscribe();
+  }, [user?.uid]);
+
+  // ✅ 3. Fetch Orders
   useEffect(() => {
     if (!user?.uid) return;
 
     const loadOrders = async () => {
       try {
         const userOrders = await getUserOrders(user.uid);
-        setOrders(userOrders);
+        setOrders(userOrders || []);
       } catch (error) {
         console.error("Failed to load orders:", error);
+        setOrders([]);
       } finally {
         setLoading(false);
       }
@@ -55,8 +110,8 @@ export default function DashboardContent() {
   }, [user?.uid]);
 
   const totalOrders = orders.length;
-  const totalSpent = orders.reduce((sum, order) => sum + order.total, 0);
-  const recentOrders = orders.slice(0, 2);
+  const totalSpent = orders.reduce((sum, order) => sum + (order.total || 0), 0);
+  const recentOrders = orders.slice(0, 3);
 
   const stats = [
     {
@@ -68,21 +123,21 @@ export default function DashboardContent() {
     },
     {
       title: "Cart Items",
-      value: "0",
+      value: cartCount.toString(), // ✅ Real data
       icon: ShoppingBag,
       color: "bg-green-100 text-green-600",
       href: "/cart",
     },
     {
       title: "Wishlist",
-      value: "0",
+      value: wishlistCount.toString(), // ✅ Real data
       icon: Heart,
       color: "bg-pink-100 text-pink-600",
       href: "/wishlist",
     },
     {
       title: "Total Spent",
-      value: `₦${totalSpent.toLocaleString()}`,
+      value: `₦${totalSpent.toLocaleString()}`, // ✅ Real data
       icon: CreditCard,
       color: "bg-blue-100 text-blue-600",
       href: "/orders",
@@ -90,52 +145,28 @@ export default function DashboardContent() {
   ];
 
   const quickLinks = [
-    {
-      title: "Browse Menu",
-      description: "Explore our delicious meals and pastries.",
-      href: "/menu",
-    },
-    {
-      title: "Book Catering",
-      description: "Request catering for weddings and events.",
-      href: "/catering",
-    },
-    {
-      title: "My Orders",
-      description: "Track your previous and current orders.",
-      href: "/orders",
-    },
-    {
-      title: "My Profile",
-      description: "Manage your account information.",
-      href: "/profile",
-    },
+    { title: "Browse Menu", description: "Explore our delicious meals and pastries.", href: "/menu" },
+    { title: "Book Catering", description: "Request catering for weddings and events.", href: "/catering" },
+    { title: "My Orders", description: "Track your previous and current orders.", href: "/orders" },
+    { title: "My Profile", description: "Manage your account information.", href: "/profile" },
   ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "completed":
-        return "bg-green-100 text-green-700";
-      case "confirmed":
-        return "bg-blue-100 text-blue-700";
-      case "processing":
-        return "bg-yellow-100 text-yellow-700";
-      case "cancelled":
-        return "bg-red-100 text-red-700";
-      default:
-        return "bg-gray-100 text-gray-700";
+      case "completed": return "bg-green-100 text-green-700";
+      case "confirmed": return "bg-blue-100 text-blue-700";
+      case "processing": return "bg-yellow-100 text-yellow-700";
+      case "cancelled": return "bg-red-100 text-red-700";
+      default: return "bg-gray-100 text-gray-700";
     }
   };
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
+      year: "numeric", month: "short", day: "numeric",
     });
   };
 
-  // Show loader while auth is checking, orders loading, or while redirecting unauthenticated users
   const shouldShowLoader = authLoading || loading || (!authLoading && !user);
 
   if (shouldShowLoader) {
@@ -154,25 +185,21 @@ export default function DashboardContent() {
       <section className="bg-gradient-to-r from-orange-500 to-amber-500 py-16 text-white">
         <div className="mx-auto max-w-7xl px-6">
           <h1 className="text-4xl font-bold">
-            Welcome Back 👋 {profile?.name ? profile.name.split(" ")[0] : ""}
+            Welcome Back 👋 {profile?.name ? profile.name.split(" ")[0] : "User"}
           </h1>
           <p className="mt-3 max-w-2xl text-lg text-orange-100">
-            Manage your orders, shopping cart, profile, and explore everything
-            Bisoyin Confectionery & Catering Services has to offer.
+            Manage your orders, shopping cart, profile, and explore everything Bisoyin Confectionery & Catering has to offer.
           </p>
         </div>
       </section>
 
       <div className="mx-auto max-w-7xl px-6 py-16">
+        {/* Stats Grid */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat) => {
             const Icon = stat.icon;
             return (
-              <Link
-                key={stat.title}
-                href={stat.href}
-                className="rounded-2xl bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
-              >
+              <Link key={stat.title} href={stat.href} className="rounded-2xl bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
                 <div className={`mb-5 inline-flex rounded-xl p-4 ${stat.color}`}>
                   <Icon size={28} />
                 </div>
@@ -183,15 +210,12 @@ export default function DashboardContent() {
           })}
         </div>
 
+        {/* Quick Actions */}
         <section className="mt-16">
           <h2 className="mb-8 text-3xl font-bold text-gray-900">Quick Actions</h2>
           <div className="grid gap-8 md:grid-cols-2">
             {quickLinks.map((item) => (
-              <Link
-                key={item.title}
-                href={item.href}
-                className="group rounded-2xl bg-white p-8 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
-              >
+              <Link key={item.title} href={item.href} className="group rounded-2xl bg-white p-8 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
                 <div className="flex items-center justify-between">
                   <h3 className="text-2xl font-semibold text-gray-900">{item.title}</h3>
                   <ArrowRight className="transition group-hover:translate-x-2" />
@@ -202,6 +226,7 @@ export default function DashboardContent() {
           </div>
         </section>
 
+        {/* Profile Summary */}
         <section className="mt-16 rounded-3xl bg-white p-8 shadow-sm">
           <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-6">
@@ -212,31 +237,21 @@ export default function DashboardContent() {
                 <h2 className="text-2xl font-bold text-gray-900">{profile?.name || "User"}</h2>
                 <p className="text-gray-600">{user?.email}</p>
                 <p className="mt-1 text-sm text-gray-500">
-                  Customer since{" "}
-                  {profile?.createdAt
-                    ? new Date(profile.createdAt).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                      })
-                    : "now"}
+                  Customer since {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long" }) : "now"}
                 </p>
               </div>
             </div>
-            <Link
-              href="/profile"
-              className="rounded-xl bg-orange-600 px-8 py-4 font-semibold text-white transition hover:bg-orange-700"
-            >
+            <Link href="/profile" className="rounded-xl bg-orange-600 px-8 py-4 font-semibold text-white transition hover:bg-orange-700 text-center">
               Edit Profile
             </Link>
           </div>
         </section>
 
+        {/* Recent Orders */}
         <section className="mt-16 rounded-3xl bg-white p-8 shadow-sm">
           <div className="mb-8 flex items-center justify-between">
             <h2 className="text-3xl font-bold text-gray-900">Recent Orders</h2>
-            <Link href="/orders" className="font-semibold text-orange-600 hover:text-orange-700">
-              View All
-            </Link>
+            <Link href="/orders" className="font-semibold text-orange-600 hover:text-orange-700">View All</Link>
           </div>
 
           {recentOrders.length > 0 ? (
@@ -253,16 +268,14 @@ export default function DashboardContent() {
                 <tbody>
                   {recentOrders.map((order) => (
                     <tr key={order.id} className="border-b">
-                      <td className="py-5 font-mono text-sm">{order.id?.slice(0, 8).toUpperCase()}</td>
+                      <td className="py-5 font-mono text-sm">{order.id?.slice(0, 8).toUpperCase() || "N/A"}</td>
                       <td>{formatDate(order.createdAt)}</td>
                       <td>
-                        <span
-                          className={`rounded-full px-3 py-1 text-sm capitalize ${getStatusColor(order.orderStatus)}`}
-                        >
+                        <span className={`rounded-full px-3 py-1 text-sm capitalize ${getStatusColor(order.orderStatus)}`}>
                           {order.orderStatus}
                         </span>
                       </td>
-                      <td className="text-right font-semibold">₦{order.total.toLocaleString()}</td>
+                      <td className="text-right font-semibold">₦{(order.total || 0).toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -272,10 +285,7 @@ export default function DashboardContent() {
             <div className="py-12 text-center">
               <Package className="mx-auto mb-4 text-gray-400" size={40} />
               <p className="text-gray-600">No orders yet. Start shopping!</p>
-              <Link
-                href="/menu"
-                className="mt-4 inline-block rounded-xl bg-orange-600 px-6 py-2 font-semibold text-white hover:bg-orange-700"
-              >
+              <Link href="/menu" className="mt-4 inline-block rounded-xl bg-orange-600 px-6 py-2 font-semibold text-white hover:bg-orange-700">
                 Browse Menu
               </Link>
             </div>
